@@ -48,12 +48,13 @@ import serial
 import serial.tools.list_ports
 import time
 import win32gui
+import win32process
 import atexit
 import pkg_resources
 from infi.systray import SysTrayIcon
 import GUI_manager 
 import data
-
+import psutil
 
 #----- Variables -----#
 connected = 0
@@ -76,6 +77,9 @@ showing_song_track = 0
 paused = "Paused"
 show_song = 1
 ports = list(serial.tools.list_ports.comports())
+char = "-"
+result = ""
+spotify_pid = None
 #           Exit Handler
 #-----------------------------------
 def exit_handler():
@@ -97,45 +101,51 @@ systray = SysTrayIcon("icon.ico", "Arduino Spotify Checker",menu_options, on_qui
 systray.start()
 #-----------------------------------
 #Get Spotify Window Info
-def get_info_windows():
-    global paused
-    windows = []
-    old_window = win32gui.FindWindow("SpotifyMainWindow", None)
-    old = win32gui.GetWindowText(old_window)
+def get_info_windows(option):
+    global char
+    global result
+    global spotify_pid
 
-    def find_spotify_uwp(hwnd, windows):
-        text = win32gui.GetWindowText(hwnd)
-        try:
-            classname = win32gui.GetClassName(hwnd)
-            if classname == "Chrome_WidgetWin_0" and len(text) > 0:
-                windows.append(text)
-        except:
-            print("Cant find window")
-    if old:
-        windows.append(old)
-    else:
-        win32gui.EnumWindows(find_spotify_uwp, windows)
-    # If Spotify isn't running the list will be empty
-    if len(windows) == 0:
-        return spotify_closed_key, spotify_closed_key
-    # Local songs may only have a title field
+    pids = []
     try:
-        artist, track = windows[0].split(" - ", 1)
-    except ValueError:
-        artist = ""
-        track = windows[0]
-    # The window title is the default one when paused
-    if windows[0].startswith("Spotify"):
-        return paused, paused
+        result = ""
+        for proc in psutil.process_iter(['name', 'pid']):
+            if proc.name().lower() == 'spotify.exe':
+                pids.append(proc.info["pid"])
 
-    return track, artist
+        def callaback(hwnd, pid):
+            global result
+            global spotify_pid
+            pid_list = win32process.GetWindowThreadProcessId(hwnd)
+            if pid == pid_list[1]:
+                if char in win32gui.GetWindowText(hwnd):
+                    result = win32gui.GetWindowText(hwnd)
+                    spotify_pid = pid
+                    return
+                elif win32gui.GetWindowText(hwnd) == "Spotify Free":
+                    result = "Paused - Paused"
+                    return
+
+        for i in pids:
+            win32gui.EnumWindows(callaback, i)
+    except:
+        print("Error while getting song info")
+    
+    parts = result.split(char)
+    try:
+        if option == "artist":
+            return parts[0]
+        if option == "song":
+            return parts[1]
+    except:
+        return spotify_closed_key
 
 #Split get_info_windows() result
 #-----------------------------------
 def artist():
-    return get_info_windows()[1]
+    return get_info_windows("artist")
 def song():
-    return get_info_windows()[0]
+    return get_info_windows("song")
 #-----------------------------------
 #Connect With the Arduino via Com6 port
 def connect():
@@ -145,7 +155,7 @@ def connect():
     for p in ports:
         if "USB-SERIAL CH340" in p.description:
             port = p.name
-            print(p.name)
+            #print(p.name)
     try:
         arduino = serial.Serial(port, 9600)
         print("Connected")
