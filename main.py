@@ -13,12 +13,6 @@ executable. I've added some things but i can't
 remember. The program is now better and faster.
 ---------------------------------------------------------
                 Issues:
--At this point i have lost any form of sanity while
-editing this at 2:40 am during a cold Friday night
-suffering from mild covid symptoms. If anyone ever
-gets to see this program please excuse me for my bad
-problem solving method my 16 year old self followed to
-make this one project.
 
 -When song stopped and started really fast 
 arduino displays both paused and the song's name
