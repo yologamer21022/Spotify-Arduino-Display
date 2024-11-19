@@ -1,2 +1,6 @@
 # Spotify-Arduino-Display
-Displays current song playing on spotify and the time on arduino lcd display
+Displays current song playing on spotify and the time on arduino lcd display.
+
+A python server runs locally on the pc. The server send the arduino via
+serial communication the data extracted from the running spotify window
+and then displays it on an lcd display.
